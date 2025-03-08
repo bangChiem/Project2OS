@@ -136,6 +136,7 @@ int main(int argc, char** argv){
 
 	if(argc != 2){
 		fprintf(stderr, "Bad Arguments, please select 1 option\n");
+		exit(1);
 	}
 
 	//Open and read input.txt
@@ -147,15 +148,6 @@ int main(int argc, char** argv){
 			printf("%d ", puzzle[i][j]);
 		}
 		printf("\n");
-	}
-
-	// get commandline arg
-	int version = atoi(argv[1]);
-
-	// create pids
-	int num_threads;
-	if (version == 2){
-		num_threads = 9;
 	}
 
 	char* SOLUTION;
@@ -171,13 +163,5 @@ int main(int argc, char** argv){
 		printf("SOLUTION: NO in %f\n", duration);
 	}
 	
-	
-	//Create threads for rows
-	//Create threads for columns
-	//Create threads for squares
-
-
-	//Join Threads
-
 	return 0;
 }
