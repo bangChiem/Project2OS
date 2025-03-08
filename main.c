@@ -156,6 +156,7 @@ int main(int argc, char** argv){
 
 	if(argc != 2){
 		fprintf(stderr, "Bad Arguments, please select 1 option\n");
+		exit(1);
 	}
 
 	//Open and read input.txt
