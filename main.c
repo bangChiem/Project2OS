@@ -20,7 +20,7 @@ void * square(void* param){
 			int pRow = squareNum/3 *3 + i;
 			int pCol = squareNum%3 *3 + j;
 			int val = puzzle[pRow][pCol];
-			checker[val]++;
+			checker[val - 1]++;
 		}
 	}
 
@@ -107,26 +107,46 @@ void call_threads(int option){
 		pthread_join(pid[i], NULL);
 	}
 
-	pthread_t rows_t[9];
-	pthread_t cols_t[9];
 
-	// create threads to cols
 	int cols[9];
 	int rows[9];
-	for (int i = 0; i < 9; i++)
-	{
-		cols[i] = i + 1;
-		rows[i] = i + 1;
-		pthread_create(&rows_t[i], NULL, row, &rows[i]);
-		pthread_create(&cols_t[i], NULL, column, &cols[i]);
+	if (option == 1){
+		pthread_t row_t;
+		pthread_t col_t;
+
+		for (int i = 0; i < 9; i++)
+		{
+			cols[i] = i + 1;
+			rows[i] = i + 1;
+			pthread_create(&row_t, NULL, row, &rows[i]);
+			pthread_create(&col_t, NULL, column, &cols[i]);
+		}	
+
+		pthread_join(row_t, NULL);
+		pthread_join(col_t, NULL);
 	}
 
-	// join threads
-	for (int i = 0; i < 9; i++)
-	{
-		pthread_join(rows_t[i], NULL);
-		pthread_join(cols_t[i], NULL);
+	else if (option == 2){
+		pthread_t rows_t[9];
+		pthread_t cols_t[9];
+
+		// create threads to cols
+		for (int i = 0; i < 9; i++)
+		{
+			cols[i] = i + 1;
+			rows[i] = i + 1;
+			pthread_create(&rows_t[i], NULL, row, &rows[i]);
+			pthread_create(&cols_t[i], NULL, column, &cols[i]);
+		}
+
+		// join threads
+		for (int i = 0; i < 9; i++)
+		{
+			pthread_join(rows_t[i], NULL);
+			pthread_join(cols_t[i], NULL);
+		}
 	}
+	
 }
 
 int main(int argc, char** argv){
@@ -149,35 +169,21 @@ int main(int argc, char** argv){
 		printf("\n");
 	}
 
-	// get commandline arg
-	int version = atoi(argv[1]);
-
-	// create pids
-	int num_threads;
-	if (version == 2){
-		num_threads = 9;
-	}
-
 	char* SOLUTION;
 	clock_t end = clock();
-
-	call_threads(2);
-
+	call_threads(2); //driver
 	double duration = (double) (end - begin) / CLOCKS_PER_SEC;
+
+	FILE *res;
+	res = fopen("results.txt", "a+");
+
 	if (correctPuzzle){
 		printf("SOLUTION: YES in %f\n", duration);
+		fprintf(res, "%f\n", duration);
 	}
 	else{
 		printf("SOLUTION: NO in %f\n", duration);
+		fprintf(res, "%f\n", duration);
 	}
-	
-	
-	//Create threads for rows
-	//Create threads for columns
-	//Create threads for squares
-
-
-	//Join Threads
-
 	return 0;
 }
