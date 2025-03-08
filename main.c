@@ -1,6 +1,13 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<pthread.h>
+#include<time.h>
+
+//gloabal vairable to fill with input
+int puzzle[9][9];
+
+//global flag variable to declare if puzzle is correct or wrong
+int correct_puzzle = 1;
 
 //thread algorithms to validate
 void column(void* param){
@@ -42,14 +49,8 @@ void square(void* param){
 	int square = *(int*)param;
 }
 
-
-//gloabal vairable to fill with input
-int puzzle[9][9];
-
-//global flag variable to declare if puzzle is correct or wrong
-int correct_puzzle = 1;
-
 int main(int argc, char** argv){
+	time_t begin = time(NULL);
 	int option = 0;
 	FILE *fptr = NULL;
 
@@ -62,8 +63,13 @@ int main(int argc, char** argv){
 	for(int i = 0; i < 9; i++){
 		for (int j = 0; j < 9; j++){
 			fscanf(fptr, "%d ", &puzzle[i][j]);
+			printf("%d ", puzzle[i][j]);
 		}
-	}	
+		printf("\n");
+	}
+
+	printf("SOLUTION: *** in %ld", time(NULL) - begin);
+	
 	
 	//Create threads for rows
 	//Create threads for columns
