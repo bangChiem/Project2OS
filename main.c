@@ -233,7 +233,8 @@ void handleOption3(){
 	wait(NULL);
 	wait(NULL);
 	wait(NULL);
-
+	
+	printf("Children Complete\n");
 	for(int i; i<3; i++){
 		//TODO FIX SEGFAULT ERROER
 		if(shm_worker_threads[i] == 0){
@@ -241,7 +242,7 @@ void handleOption3(){
 		}
 	}
 
-	printf("Children Complete\n");
+
 }
 
 // call appropiate amount of worker threads according to option
