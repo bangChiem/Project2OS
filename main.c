@@ -156,10 +156,10 @@ void handleOption3(){
 	const int SIZE = 4096;
 	const char* shm_name = "shared_memory";
 	int fd;
-	int *shm_worker_threads;
+	int *shmPtr;
 	fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
 	ftruncate(fd,SIZE);
-	shm_worker_threads = (int *)mmap(0,SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);	
+	shmPtr = (int*) mmap(0,SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);	
 	
 	pid_t n1 = -1, n2= -1, n3 = -1;
 	n1 = fork();	
@@ -186,16 +186,17 @@ void handleOption3(){
 
 
 	if(n1 == 0){//Child Process 1 will check rows
-		printf("process 1\n");
+	//	printf("process 1\n");
 		int rowCorrect = 1;
 		for (int i = 0; i < 9; i++)
 			if(check_row(i) == 0)
-				rowCorrect = 1;
-		shm_worker_threads[0] = rowCorrect;
+				rowCorrect = 0;
+		
+		shmPtr[0] = rowCorrect;
 		exit(0); //exit process
 	}
 	else if(n2 == 0){//Child Process 2 will check columns
-		printf("process 2\n");
+	//	printf("process 2\n");
 		int colCorrect = 1;
 		for (int i = 0; i < 9; i++)
 		{	
@@ -204,11 +205,11 @@ void handleOption3(){
 
 			}
 		}
-		shm_worker_threads[1] = colCorrect;
+		shmPtr[1] = colCorrect;
 		exit(0);//exit process
 	}
 	else if(n3 == 0){//Child Process 3 will check squares
-		printf("Process 3\n");
+	//	printf("Process 3\n");
 			
 		pthread_t pid[9];
 		int square_params[9];
@@ -225,24 +226,18 @@ void handleOption3(){
 			free(retvals[i]);
 		}
 
-		shm_worker_threads[2] = squareCorrect;
-
+		shmPtr[2] = squareCorrect;
 		exit(0);
 	}
 	//Only Parent should exist past here
 	wait(NULL);
 	wait(NULL);
 	wait(NULL);
-	
 	printf("Children Complete\n");
-	for(int i; i<3; i++){
-		//TODO FIX SEGFAULT ERROER
-		if(shm_worker_threads[i] == 0){
-			correctPuzzle = 0;
-		}
-	}
-
-
+	//Debug statment printf("TEST \'%d%d%d'\n", shmPtr[0],shmPtr[1],shmPtr[2]);
+	
+	correctPuzzle = shmPtr[0] && shmPtr[1] && shmPtr[2];
+	shm_unlink(shm_name);
 }
 
 // call appropiate amount of worker threads according to option
@@ -358,7 +353,7 @@ int main(int argc, char** argv){
 
 	int option = atoi(argv[1]);
 
-	char *input_name = "input.txt";
+	char const * const input_name = "input.txt";
 
 	//Open and read input.txt
 	fptr = fopen(input_name, "r");
@@ -373,6 +368,7 @@ int main(int argc, char** argv){
 	}
 
 	char* SOLUTION;
+	//TODO Dearest Bang why is the clock end before call threads?
 	clock_t end = clock();
 	call_threads(option); //driver
 	double duration = (double) (end - begin) / CLOCKS_PER_SEC;
@@ -386,16 +382,13 @@ int main(int argc, char** argv){
 	}
 
 	//print puzzle result
-	if (correctPuzzle == 1){
+	if (correctPuzzle){
 		printf("SOLUTION: YES in %f\n", duration);
 		fprintf(res, "%f\n", duration);
 	}
-	else if (correctPuzzle == 0){
+	else if (!correctPuzzle){
 		printf("SOLUTION: NO in %f\n", duration);
 		fprintf(res, "%f\n", duration);
-	}
-	else{
-		printf("ERROR\n");
 	}
 	return 0;
 }
