@@ -358,9 +358,12 @@ int main(int argc, char** argv){
 
 	int option = atoi(argv[1]);
 
+	char *input_name = "input.txt";
+
 	//Open and read input.txt
-	fptr = fopen("input.txt", "r");
+	fptr = fopen(input_name, "r");
 	if(fptr == NULL)fprintf(stderr, "Error opening input.txt\n");
+	printf("BOARD STATE IN %s:\n", input_name);
 	for(int i = 0; i < 9; i++){
 		for (int j = 0; j < 9; j++){
 			fscanf(fptr, "%d ", &puzzle[i][j]);
