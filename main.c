@@ -233,7 +233,7 @@ void handleOption3(){
 	wait(NULL);
 	wait(NULL);
 	wait(NULL);
-	printf("Children Complete\n");
+	//printf("Children Complete\n");
 	//Debug statment printf("TEST \'%d%d%d'\n", shmPtr[0],shmPtr[1],shmPtr[2]);
 	
 	correctPuzzle = shmPtr[0] && shmPtr[1] && shmPtr[2];
