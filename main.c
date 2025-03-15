@@ -152,9 +152,6 @@ void *option1_col(){
  
 // create three processes one to check rows, cols, grids
 void handleOption3(){	
-	int n1 = fork();
-	int n2 = fork();
-
 	// create shared memory
 	const int SIZE = 4096;
 	const char* shm_name = "shared_memory";
@@ -163,59 +160,88 @@ void handleOption3(){
 	fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
 	ftruncate(fd,SIZE);
 	shm_worker_threads = (int *)mmap(0,SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);	
+	
+	pid_t n1 = -1, n2= -1, n3 = -1;
+	n1 = fork();	
 
-	if (n1 > 0 && n2 > 0){
-		wait(NULL);
-		printf("parent\n");
+	if(n1<0){
+		printf("Forking Error\n");
+		exit(1);
+	}
 
-		// load file to log output
-		FILE *res;
-		res = fopen("results.txt", "a+");
-
-		// check validation status for worker threads
-		for (int i = 0; i < 2; i++)
-		{
-			if (shm_worker_threads[i] == 0){
-				correctPuzzle = 0;
+	if(n1>0){ //if parent
+		n2 = fork();
+		if(n2<0){
+		printf("Forking Error\n");
+			exit(1);
+		}
+		if(n2>0){	//if parent
+			n3 = fork();
+			if(n3<0){
+				printf("Forking Error\n");
+				exit(1);
 			}
 		}
 	}
 
-	// check rows in process 1; index 0 in shm_worker_threads marks validation value for rows
-	else if (n1 == 0 && n2 > 0){
+
+	if(n1 == 0){//Child Process 1 will check rows
 		printf("process 1\n");
+		int rowCorrect = 1;
 		for (int i = 0; i < 9; i++)
-		{	
-			if (check_row(i) == 1){
-				shm_worker_threads[0] = 1;
-			}
-			else{
-				shm_worker_threads[0] = 0;
-			}
-		}
-		exit(0);
+			if(check_row(i) == 0)
+				rowCorrect = 1;
+		shm_worker_threads[0] = rowCorrect;
+		exit(0); //exit process
 	}
-
-	// check cols in process 1; index 1 in shm_worker_threads marks validation value for cols
-	else if (n1 > 0 && n2 == 0){
+	else if(n2 == 0){//Child Process 2 will check columns
 		printf("process 2\n");
+		int colCorrect = 1;
 		for (int i = 0; i < 9; i++)
 		{	
-			if (check_col(i) == 1){
-				shm_worker_threads[1] = 1;
-			}
-			else{
-				shm_worker_threads[1] = 0;
+			if (check_col(i) == 0){
+				colCorrect = 0;
+
 			}
 		}
+		shm_worker_threads[1] = colCorrect;
+		exit(0);//exit process
+	}
+	else if(n3 == 0){//Child Process 3 will check squares
+		printf("Process 3\n");
+			
+		pthread_t pid[9];
+		int square_params[9];
+		void *retvals[9];
+		int squareCorrect = 1; //new bool
+		for(int i = 0; i < 9; i++){
+			square_params[i] = i;
+			pthread_create(&pid[i], NULL, square, &square_params[i]);
+		}
+		for(int i = 0; i < 9; i++){
+			pthread_join(pid[i], &retvals[i]);
+			if(*(int*)retvals[i] == 0) //change bool if false
+				squareCorrect = 0;
+			free(retvals[i]);
+		}
+
+		shm_worker_threads[2] = squareCorrect;
 
 		exit(0);
 	}
+	//Only Parent should exist past here
+	wait(NULL);
+	wait(NULL);
+	wait(NULL);
 
-	else{
-		printf("process 3\n");
-		exit(0);
+	for(int i; i<3; i++){
+		//TODO FIX SEGFAULT ERROER
+		if(shm_worker_threads[i] == 0){
+			correctPuzzle = 0;
+		}
 	}
+
+	printf("Children Complete\n");
 }
 
 // call appropiate amount of worker threads according to option
@@ -332,7 +358,7 @@ int main(int argc, char** argv){
 	int option = atoi(argv[1]);
 
 	//Open and read input.txt
-	fptr = fopen("input3.txt", "r");
+	fptr = fopen("input.txt", "r");
 	if(fptr == NULL)fprintf(stderr, "Error opening input.txt\n");
 	for(int i = 0; i < 9; i++){
 		for (int j = 0; j < 9; j++){
