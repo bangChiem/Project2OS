@@ -15,9 +15,11 @@ int puzzle[9][9];
 // confirmation array
 int colWorkerThreads[9];
 int rowWorkerThreads[9];
+int squareWorkerThreads[9];
 
 // global flag variable to declare if puzzle is correct or wrong
 int correctPuzzle = 1;
+
 
 void * square(void* param){
 	int squareNum = *(int*)param;
@@ -34,13 +36,18 @@ void * square(void* param){
 		}
 	}
 
+
 	//validates puzzle
+	//return true or false depending on square validation
+	void *retval;
+	retval = malloc(sizeof(int));
+	*(int*)retval = 1;
 	for(int i = 0; i < 9; i++){
-		if(correctPuzzle != 1){
-			correctPuzzle = checker[i] == 1;
+		if(checker[i] != 1){
+			*(int*)retval = 0;
 		}		
 	}
-	pthread_exit(0);
+	pthread_exit(retval);
 }
 
 int check_row(int row){
@@ -145,7 +152,6 @@ void *option1_col(){
  
 // create three processes one to check rows, cols, grids
 void handleOption3(){	
-	clock_t begin = clock();
 	int n1 = fork();
 	int n2 = fork();
 
@@ -166,26 +172,12 @@ void handleOption3(){
 		FILE *res;
 		res = fopen("results.txt", "a+");
 
-		// get completion time
-		clock_t end = clock();
-		double duration = (double) (end - begin) / CLOCKS_PER_SEC;
-
 		// check validation status for worker threads
-		int puzzleIsTrue = 1;
 		for (int i = 0; i < 2; i++)
 		{
 			if (shm_worker_threads[i] == 0){
-				puzzleIsTrue = 0;
+				correctPuzzle = 0;
 			}
-		}
-		
-		if (puzzleIsTrue){		
-			printf("SOLUTION: YES in %f\n", duration);
-			fprintf(res, "%f\n", duration);
-		}
-		else{
-			printf("SOLUTION: NO in %f\n", duration);
-			fprintf(res, "%f\n", duration);
 		}
 	}
 
@@ -201,6 +193,7 @@ void handleOption3(){
 				shm_worker_threads[0] = 0;
 			}
 		}
+		exit(0);
 	}
 
 	// check cols in process 1; index 1 in shm_worker_threads marks validation value for cols
@@ -215,10 +208,13 @@ void handleOption3(){
 				shm_worker_threads[1] = 0;
 			}
 		}
+
+		exit(0);
 	}
 
 	else{
 		printf("process 3\n");
+		exit(0);
 	}
 }
 
@@ -231,19 +227,19 @@ void call_threads(int option){
 
 	if (option == 2 || option == 1){
 		pthread_t pid[9];
-		pthread_t square_params[9];
+		int square_params[9];
+		void *retvals[9];
 		for(int i = 0; i < 9; i++){
 			square_params[i] = i;
 			pthread_create(&pid[i], NULL, square, &square_params[i]);
 		}
-
 		for(int i = 0; i < 9; i++){
-			pthread_join(pid[i], NULL);
+			pthread_join(pid[i], &retvals[i]);
+			squareWorkerThreads[i] = *(int*)retvals[i];
+			free(retvals[i]);
 		}
 	}
 
-	int cols[9];
-	int rows[9];
 	if (option == 1){
 		pthread_t row_t;
 		pthread_t col_t;
@@ -256,16 +252,18 @@ void call_threads(int option){
 	}
 
 	else if (option == 2){
+		int cols_params[9];
+		int rows_params[9];
 		pthread_t rows_t[9];
 		pthread_t cols_t[9];
 
 		// create threads to cols
 		for (int i = 0; i < 9; i++)
 		{
-			cols[i] = i + 1;
-			rows[i] = i + 1;
-			pthread_create(&rows_t[i], NULL, option2_row, &rows[i]);
-			pthread_create(&cols_t[i], NULL, option2_column, &cols[i]);
+			cols_params[i] = i + 1;
+			rows_params[i] = i + 1;
+			pthread_create(&rows_t[i], NULL, option2_row, &rows_params[i]);
+			pthread_create(&cols_t[i], NULL, option2_column, &cols_params[i]);
 		}
 
 		// join threads
@@ -299,25 +297,31 @@ int check_worker_array(int option){
 			if (colWorkerThreads[i] == 0){
 				return 0;
 			}
+			if (squareWorkerThreads[i] == 0){
+				return 0;
+			}
 		}
 		return 1;
 	}
 	else if (option == 1){
+
+		//checks square
+		for(int i = 0; i < 9; i++)
+			if(squareWorkerThreads[i] == 0)
+				return 0;
+
+		//checks row and column
 		if (rowWorkerThreads[0] == 0 || colWorkerThreads[0] == 0){
 			return 0;
 		}
 		else if (rowWorkerThreads[0] == 1 && colWorkerThreads[0] == 1){
 			return 1;
 		}
-		else{
-			return -1;
-		}	
 	}
 }
 
 int main(int argc, char** argv){
 	clock_t begin = clock();
-	int option = atoi(argv[1]);
 	FILE *fptr = NULL;
 
 	if(argc != 2){
@@ -325,8 +329,10 @@ int main(int argc, char** argv){
 		exit(1);
 	}
 
+	int option = atoi(argv[1]);
+
 	//Open and read input.txt
-	fptr = fopen("input.txt", "r");
+	fptr = fopen("input3.txt", "r");
 	if(fptr == NULL)fprintf(stderr, "Error opening input.txt\n");
 	for(int i = 0; i < 9; i++){
 		for (int j = 0; j < 9; j++){
@@ -341,23 +347,25 @@ int main(int argc, char** argv){
 	call_threads(option); //driver
 	double duration = (double) (end - begin) / CLOCKS_PER_SEC;
 
+	// start logging
 	FILE *res;
 	res = fopen("Option1Yes.txt", "a+");
 
-	//print puzzle result
-	if (option != 3){ // exclude if option 3 since spanwed process will incorrectly print 3 result statements
-		if (check_worker_array(option) == 1){
-			printf("SOLUTION: YES in %f\n", duration);
-			fprintf(res, "%f\n", duration);
-	}
-		else if (check_worker_array(option) == 0){
-			printf("SOLUTION: NO in %f\n", duration);
-			fprintf(res, "%f\n", duration);
-		}
-		else{
-			printf("ERROR\n");
-		}
+	if (option != 3){
+		correctPuzzle = check_worker_array(option);
 	}
 
+	//print puzzle result
+	if (correctPuzzle == 1){
+		printf("SOLUTION: YES in %f\n", duration);
+		fprintf(res, "%f\n", duration);
+	}
+	else if (correctPuzzle == 0){
+		printf("SOLUTION: NO in %f\n", duration);
+		fprintf(res, "%f\n", duration);
+	}
+	else{
+		printf("ERROR\n");
+	}
 	return 0;
 }
