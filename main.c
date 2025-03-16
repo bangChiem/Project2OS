@@ -353,7 +353,7 @@ int main(int argc, char** argv){
 
 	int option = atoi(argv[1]);
 
-	char const * const input_name = "input.txt";
+	const char * const input_name = "input.txt";
 
 	//Open and read input.txt
 	fptr = fopen(input_name, "r");
@@ -369,8 +369,8 @@ int main(int argc, char** argv){
 
 	char* SOLUTION;
 	//TODO Dearest Bang why is the clock end before call threads?
-	clock_t end = clock();
 	call_threads(option); //driver
+	clock_t end = clock();
 	double duration = (double) (end - begin) / CLOCKS_PER_SEC;
 
 	// start logging
