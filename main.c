@@ -21,6 +21,9 @@ int squareWorkerThreads[9];
 int correctPuzzle = 1;
 
 
+//Function needs to be declared first
+int check_worker_array(int option);
+
 void * square(void* param){
 	int squareNum = *(int*)param;
 	int checker[9] = {0};
@@ -295,17 +298,9 @@ void call_threads(int option){
 			pthread_join(cols_t[i], NULL);
 		}
 	}
-}
-
-// debug function
-void print_worker_array(int arr[]){
-	printf("worker array: ");
-	for (int i = 0; i < 1; i++)
-	{
-		printf("%d ", arr[i]);
+	if (option != 3){
+		correctPuzzle = check_worker_array(option);
 	}
-	printf("\n");
-	
 }
 
 // if all worker array marked there fields as correct return true / else return false
@@ -367,28 +362,16 @@ int main(int argc, char** argv){
 		printf("\n");
 	}
 
-	char* SOLUTION;
-	//TODO Dearest Bang why is the clock end before call threads?
 	call_threads(option); //driver
 	clock_t end = clock();
 	double duration = (double) (end - begin) / CLOCKS_PER_SEC;
 
-	// start logging
-	FILE *res;
-	res = fopen("Option1Yes.txt", "a+");
-
-	if (option != 3){
-		correctPuzzle = check_worker_array(option);
-	}
-
 	//print puzzle result
 	if (correctPuzzle){
 		printf("SOLUTION: YES in %f\n", duration);
-		fprintf(res, "%f\n", duration);
 	}
 	else if (!correctPuzzle){
 		printf("SOLUTION: NO in %f\n", duration);
-		fprintf(res, "%f\n", duration);
 	}
 	return 0;
 }
